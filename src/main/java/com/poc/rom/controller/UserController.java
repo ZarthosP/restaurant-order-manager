@@ -3,14 +3,14 @@ package com.poc.rom.controller;
 import com.poc.rom.entity.User;
 import com.poc.rom.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
+@RequestMapping("user")
+@CrossOrigin
 public class UserController {
 
     private UserRepository userRepository;
@@ -19,7 +19,7 @@ public class UserController {
         this.userRepository = userRepository;
     }
 
-    @GetMapping("/")
+    @GetMapping
     public String test() {
         return "Hello world";
     }

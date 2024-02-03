@@ -22,6 +22,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	implementation("org.springframework.security:spring-security-crypto:6.2.0")
+	implementation("org.modelmapper:modelmapper:2.3.8")
 }
 
 tasks.withType<Test> {
