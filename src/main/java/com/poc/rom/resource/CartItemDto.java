@@ -2,6 +2,7 @@ package com.poc.rom.resource;
 
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.poc.rom.entity.MenuItem;
+import com.poc.rom.enums.OrderStatus;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,4 +14,5 @@ public class CartItemDto implements Serializable {
     private Long id;
     private MenuItemDto menuItem;
     private int quantity;
+    private String orderStatus;
 }

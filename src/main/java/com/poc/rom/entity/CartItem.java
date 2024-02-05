@@ -1,6 +1,7 @@
 package com.poc.rom.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.poc.rom.enums.OrderStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,9 @@ public class CartItem {
     private MenuItem menuItem;
 
     private int quantity;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus orderStatus;
 
     @ManyToOne
     @JsonBackReference

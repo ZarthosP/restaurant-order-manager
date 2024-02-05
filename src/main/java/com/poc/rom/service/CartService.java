@@ -3,6 +3,7 @@ package com.poc.rom.service;
 import com.poc.rom.entity.Cart;
 import com.poc.rom.entity.CartItem;
 import com.poc.rom.entity.MenuItem;
+import com.poc.rom.enums.OrderStatus;
 import com.poc.rom.repository.CartItemRepository;
 import com.poc.rom.repository.CartRepository;
 import com.poc.rom.repository.MenuItemRepository;
@@ -40,5 +41,20 @@ public class CartService {
             }
         });
         return cartRepository.save(cart);
+    }
+
+    public Cart validateOrder(Cart cart) {
+        cart.getCartItems().forEach(cartItem -> {
+            if (cartItem.getOrderStatus() == OrderStatus.NOT_CONFIRMED && cartItem.getQuantity() > 0) {
+                cartItem.setOrderStatus(OrderStatus.CONFIRMED);
+                cartItemRepository.save(cartItem);
+            }
+        });
+        return cart;
+    }
+
+    public CartItem cartItemReady(CartItem cartItem) {
+        cartItem.setOrderStatus(OrderStatus.READY);
+        return cartItemRepository.save(cartItem);
     }
 }

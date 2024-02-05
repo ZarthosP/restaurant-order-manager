@@ -2,6 +2,7 @@ package com.poc.rom.controller;
 
 import com.poc.rom.entity.Cart;
 import com.poc.rom.entity.CartItem;
+import com.poc.rom.enums.OrderStatus;
 import com.poc.rom.mapper.CartItemMapper;
 import com.poc.rom.mapper.CartMapper;
 import com.poc.rom.repository.CartItemRepository;
@@ -57,6 +58,34 @@ public class CartController {
         if (cartOptional.isPresent()) {
             Cart cart = cartService.updateCart(cartOptional.get(), cartDto);
             return cart;
+        }
+        return null;
+    }
+
+    @PutMapping("/validate/{id}")
+    public Cart validateOrder(@PathVariable long id) {
+        Optional<Cart> cartOptional = cartRepository.findById(id);
+        if (cartOptional.isPresent()) {
+            Cart cart = cartService.validateOrder(cartOptional.get());
+            return cart;
+        }
+        return null;
+    }
+
+    @GetMapping("/kitchen/orders")
+    public List<CartItem> getOrders() {
+        List<CartItem> all = cartItemRepository.findAll();
+        List<CartItem> cartItems = all.stream().filter(cartItem -> cartItem.getOrderStatus() == OrderStatus.CONFIRMED).toList();
+        return cartItems;
+    }
+
+    @PutMapping("/cartItem/ready/{id}")
+    public List<CartItem> cartItemReady(@PathVariable long id) {
+        Optional<CartItem> byId = cartItemRepository.findById(id);
+        if (byId.isPresent()) {
+            CartItem cartItem = cartService.cartItemReady(byId.get());
+            List<CartItem> all = cartItemRepository.findAll();
+            return all.stream().filter(cartItem1 -> cartItem1.getOrderStatus() == OrderStatus.CONFIRMED).toList();
         }
         return null;
     }
