@@ -14,5 +14,8 @@ public class CartItemDto implements Serializable {
     private Long id;
     private MenuItemDto menuItem;
     private int quantity;
+    private int confirmed;
+    private int ready;
+    private int payed;
     private String orderStatus;
 }

@@ -26,13 +26,33 @@ public class CartItem {
 
     private int quantity;
 
-    @Enumerated(EnumType.STRING)
-    private OrderStatus orderStatus;
+    private int confirmed;
+
+    private int ready;
+
+    private int payed;
+
+//    @Enumerated(EnumType.STRING)
+//    private OrderStatus orderStatus;
 
     @ManyToOne
     @JsonBackReference
     @JoinColumn(name = "cart_id")
     private Cart cart;
+
+    public int getUnconfirmedItemsQuantity() {
+        if (quantity > confirmed + ready + payed) {
+            return quantity - confirmed + ready + payed;
+        }
+        return 0;
+    }
+
+    public int getConfirmedItemsQuantity() {
+        if (quantity > confirmed + ready + payed) {
+            return quantity - confirmed + ready + payed;
+        }
+        return 0;
+    }
 
     @Override
     public String toString() {

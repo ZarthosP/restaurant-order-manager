@@ -2,6 +2,7 @@ package com.poc.rom.controller;
 
 import com.poc.rom.entity.Cart;
 import com.poc.rom.entity.CartItem;
+import com.poc.rom.enums.MenuItemType;
 import com.poc.rom.enums.OrderStatus;
 import com.poc.rom.mapper.CartItemMapper;
 import com.poc.rom.mapper.CartMapper;
@@ -75,7 +76,14 @@ public class CartController {
     @GetMapping("/kitchen/orders")
     public List<CartItem> getOrders() {
         List<CartItem> all = cartItemRepository.findAll();
-        List<CartItem> cartItems = all.stream().filter(cartItem -> cartItem.getOrderStatus() == OrderStatus.CONFIRMED).toList();
+        List<CartItem> cartItems = all.stream().filter(cartItem -> cartItem.getConfirmed() > 0 && cartItem.getMenuItem().getMenuItemType() != MenuItemType.DRINK).toList();
+        return cartItems;
+    }
+
+    @GetMapping("/bar/orders")
+    public List<CartItem> getBarOrders() {
+        List<CartItem> all = cartItemRepository.findAll();
+        List<CartItem> cartItems = all.stream().filter(cartItem -> cartItem.getConfirmed() > 0 && cartItem.getMenuItem().getMenuItemType() == MenuItemType.DRINK).toList();
         return cartItems;
     }
 
@@ -83,9 +91,12 @@ public class CartController {
     public List<CartItem> cartItemReady(@PathVariable long id) {
         Optional<CartItem> byId = cartItemRepository.findById(id);
         if (byId.isPresent()) {
-            CartItem cartItem = cartService.cartItemReady(byId.get());
-            List<CartItem> all = cartItemRepository.findAll();
-            return all.stream().filter(cartItem1 -> cartItem1.getOrderStatus() == OrderStatus.CONFIRMED).toList();
+            cartService.cartItemReady(byId.get());
+
+            return byId.get().getMenuItem().getMenuItemType() == MenuItemType.DRINK ? getBarOrders() : getOrders();
+//            List<CartItem> all = cartItemRepository.findAll();
+//
+//            return all.stream().filter(cartItem -> cartItem.getConfirmed() > 0).toList();
         }
         return null;
     }

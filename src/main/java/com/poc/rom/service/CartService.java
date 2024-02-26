@@ -45,8 +45,8 @@ public class CartService {
 
     public Cart validateOrder(Cart cart) {
         cart.getCartItems().forEach(cartItem -> {
-            if (cartItem.getOrderStatus() == OrderStatus.NOT_CONFIRMED && cartItem.getQuantity() > 0) {
-                cartItem.setOrderStatus(OrderStatus.CONFIRMED);
+            if (cartItem.getQuantity() > 0 && cartItem.getUnconfirmedItemsQuantity() > 0) {
+                cartItem.setConfirmed(cartItem.getConfirmed() + cartItem.getUnconfirmedItemsQuantity());
                 cartItemRepository.save(cartItem);
             }
         });
@@ -54,7 +54,9 @@ public class CartService {
     }
 
     public CartItem cartItemReady(CartItem cartItem) {
-        cartItem.setOrderStatus(OrderStatus.READY);
+//        cartItem.setOrderStatus(OrderStatus.READY);
+        cartItem.setReady(cartItem.getReady() + cartItem.getConfirmed());
+        cartItem.setConfirmed(0);
         return cartItemRepository.save(cartItem);
     }
 }
