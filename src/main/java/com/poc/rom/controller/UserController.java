@@ -1,7 +1,9 @@
 package com.poc.rom.controller;
 
 import com.poc.rom.entity.User;
+import com.poc.rom.mapper.UserMapper;
 import com.poc.rom.repository.UserRepository;
+import com.poc.rom.resource.UserDto;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +16,11 @@ import java.util.Optional;
 public class UserController {
 
     private UserRepository userRepository;
+    private UserMapper userMapper;
 
-    public UserController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository, UserMapper userMapper) {
         this.userRepository = userRepository;
+        this.userMapper = userMapper;
     }
 
     @GetMapping
@@ -45,27 +49,37 @@ public class UserController {
         return false;
     }
 
-
-
-    @GetMapping("/createTestUser")
-    public User createUser() {
-        User user = new User();
-        user.setFirstName("testFirstName");
-        user.setLastName("testLast");
-        user.setPassword("testPassword");
+    @PostMapping("/create")
+    public User create(@RequestBody UserDto userDto) {
+        User user = userMapper.map(userDto);
 
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(encodedPassword);
 
-        userRepository.save(user);
-        Optional<User> byId = userRepository.findById(user.getId());
-        if (byId.isPresent()) {
-            return byId.get();
-        } else {
-            return null;
-        }
+        return userRepository.save(user);
     }
 
+
+    @PostMapping("/checkUserExists")
+    public boolean checkUserExists(@RequestBody String username) {
+        Optional<User> byId = userRepository.findByUsername(username);
+        if (byId.isPresent()) {
+            return true;
+        }
+        return false;
+    }
+
+    @PostMapping("/checkLogin")
+    public UserDto checkLogin(@RequestBody UserDto userDto) {
+        Optional<User> byId = userRepository.findByUsername(userDto.getUsername());
+        if (byId.isPresent()) {
+            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+            if (passwordEncoder.matches(userDto.getPassword(), byId.get().getPassword())) {
+                return userMapper.map(byId.get());
+            };
+        }
+        return null;
+    }
 
 }

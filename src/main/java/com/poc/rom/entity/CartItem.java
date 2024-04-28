@@ -26,15 +26,12 @@ public class CartItem {
 
     private int quantity;
 
+    private int preSelected;
     private int confirmed;
 
     private int ready;
 
     private int payed;
-
-//    @Enumerated(EnumType.STRING)
-//    private OrderStatus orderStatus;
-
     @ManyToOne
     @JsonBackReference
     @JoinColumn(name = "cart_id")
@@ -52,6 +49,30 @@ public class CartItem {
             return quantity - confirmed + ready + payed;
         }
         return 0;
+    }
+
+    private void updateQuantity() {
+        this.setQuantity(confirmed + ready + payed);
+    }
+
+    public void setPreSelected(int preSelected) {
+        this.preSelected = preSelected;
+        updateQuantity();
+    }
+
+    public void setConfirmed(int confirmed) {
+        this.confirmed = confirmed;
+        updateQuantity();
+    }
+
+    public void setReady(int ready) {
+        this.ready = ready;
+        updateQuantity();
+    }
+
+    public void setPayed(int payed) {
+        this.payed = payed;
+        updateQuantity();
     }
 
     @Override

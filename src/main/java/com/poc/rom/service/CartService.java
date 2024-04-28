@@ -31,13 +31,15 @@ public class CartService {
                 CartItem cartItem = new CartItem();
                 Optional<MenuItem> menuItem = menuItemRepository.findById(cartItemDto.getMenuItem().getId());
                 cartItem.setMenuItem(menuItem.get());
-                cartItem.setQuantity(cartItemDto.getQuantity());
+                cartItem.setPreSelected(cartItemDto.getPreSelected());
+//                cartItem.setQuantity(cartItemDto.getQuantity());
                 cartItem.setCart(cart);
                 cart.getCartItems().add(cartItem);
                 cartItemRepository.save(cartItem);
             } else {
                 Optional<CartItem> cartItem = cartItemRepository.findById(cartItemDto.getId());
-                cartItem.get().setQuantity(cartItemDto.getQuantity());
+//                cartItem.get().setQuantity(cartItemDto.getQuantity());
+                cartItem.get().setPreSelected(cartItemDto.getPreSelected());
             }
         });
         return cartRepository.save(cart);
@@ -45,8 +47,9 @@ public class CartService {
 
     public Cart validateOrder(Cart cart) {
         cart.getCartItems().forEach(cartItem -> {
-            if (cartItem.getQuantity() > 0 && cartItem.getUnconfirmedItemsQuantity() > 0) {
-                cartItem.setConfirmed(cartItem.getConfirmed() + cartItem.getUnconfirmedItemsQuantity());
+            if (cartItem.getPreSelected() > 0) {
+                cartItem.setConfirmed(cartItem.getConfirmed() + cartItem.getPreSelected());
+                cartItem.setPreSelected(0);
                 cartItemRepository.save(cartItem);
             }
         });
@@ -54,7 +57,6 @@ public class CartService {
     }
 
     public CartItem cartItemReady(CartItem cartItem) {
-//        cartItem.setOrderStatus(OrderStatus.READY);
         cartItem.setReady(cartItem.getReady() + cartItem.getConfirmed());
         cartItem.setConfirmed(0);
         return cartItemRepository.save(cartItem);

@@ -11,21 +11,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name="users")
-public class User {
+@Table(name="tableR")
+public class TableR {
 
     @Id
     @GeneratedValue
     private Long id;
 
-    private String email;
+    private int number;
 
-    @Column(unique=true)
-    private String username;
-
-    private String password;
-
-    private String firstName;
-
-    private String lastName;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "cart_id", referencedColumnName = "id")
+    private Cart cart;
 }
