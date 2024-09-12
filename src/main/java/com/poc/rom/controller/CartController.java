@@ -138,4 +138,14 @@ public class CartController {
         }
         return null;
     }
+
+    @GetMapping("/getUnpaidItems/{id}")
+    public ResponseEntity<List<CartItem>> getUnpayedItems(@PathVariable long id) {
+        Optional<Cart> byId = cartRepository.findById(id);
+        if (byId.isPresent()) {
+            List<CartItem> cartItems = byId.get().getCartItems().stream().filter(cartItem -> cartItem.getReady() > 0).toList();
+            return new ResponseEntity<>(cartItems, HttpStatus.OK);
+        }
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
 }
