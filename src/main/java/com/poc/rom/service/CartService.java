@@ -3,26 +3,33 @@ package com.poc.rom.service;
 import com.poc.rom.entity.Cart;
 import com.poc.rom.entity.CartItem;
 import com.poc.rom.entity.MenuItem;
-import com.poc.rom.enums.OrderStatus;
+import com.poc.rom.mapper.CartItemMapper;
 import com.poc.rom.repository.CartItemRepository;
 import com.poc.rom.repository.CartRepository;
 import com.poc.rom.repository.MenuItemRepository;
 import com.poc.rom.resource.CartDto;
+import com.poc.rom.resource.CartItemDto;
+import com.poc.rom.resource.CompleteCartDto;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
 public class CartService {
 
+    private final CartItemMapper cartItemMapper;
     private MenuItemRepository menuItemRepository;
     private CartRepository cartRepository;
     private CartItemRepository cartItemRepository;
 
-    public CartService(MenuItemRepository menuItemRepository, CartRepository cartRepository, CartItemRepository cartItemRepository) {
+    public CartService(MenuItemRepository menuItemRepository, CartRepository cartRepository, CartItemRepository cartItemRepository, CartItemMapper cartItemMapper) {
         this.menuItemRepository = menuItemRepository;
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
+        this.cartItemMapper = cartItemMapper;
     }
 
     public Cart updateCart(Cart cart, CartDto cartDto) {
@@ -60,5 +67,38 @@ public class CartService {
         cartItem.setReady(cartItem.getReady() + cartItem.getConfirmed());
         cartItem.setConfirmed(0);
         return cartItemRepository.save(cartItem);
+    }
+
+    public Cart addMissingItemsToCart(Cart cart) {
+        List<MenuItem> completeMenu = menuItemRepository.findAll();
+        completeMenu.forEach(menuItem -> {
+            if (cart.getCartItems().stream().noneMatch(cartItemDto -> Objects.equals(cartItemDto.getMenuItem().getId(), menuItem.getId()))) {
+                CartItem cartItem = CartItem.builder()
+                        .menuItem(menuItem)
+                        .quantity(0)
+                        .preSelected(0)
+                        .confirmed(0)
+                        .ready(0)
+                        .payed(0)
+                        .cart(cart)
+                        .build();
+                cart.getCartItems().add(cartItemRepository.save(cartItem));
+            }
+        });
+        return cartRepository.save(cart);
+    }
+
+    public Cart refreshCartItems(Cart cart, CompleteCartDto completeCartDto) {
+        cart.getCartItems().forEach(cartItem -> {
+            CartItemDto cartItemById = completeCartDto.findCartItemById(cartItem.getId());
+            cartItem.setPreSelected(cartItemById.getPreSelected());
+            cartItem.setConfirmed(cartItemById.getConfirmed());
+            cartItem.setReady(cartItemById.getReady());
+            cartItem.setPayed(cartItemById.getPayed());
+            cartItem.setQuantity(cartItemById.getPayed());
+            cartItem.setQuantity(cartItem.getPreSelected() + cartItem.getConfirmed() + cartItem.getPayed() + cartItem.getPayed());
+            cartItemRepository.save(cartItem);
+        });
+        return cart;
     }
 }

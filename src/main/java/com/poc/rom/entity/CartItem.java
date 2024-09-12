@@ -51,28 +51,24 @@ public class CartItem {
         return 0;
     }
 
-    private void updateQuantity() {
+    public void updateQuantity() {
         this.setQuantity(confirmed + ready + payed);
     }
 
     public void setPreSelected(int preSelected) {
         this.preSelected = preSelected;
-        updateQuantity();
     }
 
     public void setConfirmed(int confirmed) {
         this.confirmed = confirmed;
-        updateQuantity();
     }
 
     public void setReady(int ready) {
         this.ready = ready;
-        updateQuantity();
     }
 
     public void setPayed(int payed) {
         this.payed = payed;
-        updateQuantity();
     }
 
     @Override

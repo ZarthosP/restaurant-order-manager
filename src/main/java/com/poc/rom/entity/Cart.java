@@ -23,7 +23,7 @@ public class Cart {
 
     private String title;
 
-    @OneToMany(mappedBy = "cart", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "cart", fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<CartItem> cartItems;
 
