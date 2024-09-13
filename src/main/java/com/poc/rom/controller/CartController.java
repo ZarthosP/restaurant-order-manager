@@ -2,9 +2,8 @@ package com.poc.rom.controller;
 
 import com.poc.rom.entity.Cart;
 import com.poc.rom.entity.CartItem;
-import com.poc.rom.entity.User;
+import com.poc.rom.entity.TableR;
 import com.poc.rom.enums.MenuItemType;
-import com.poc.rom.enums.OrderStatus;
 import com.poc.rom.mapper.CartItemMapper;
 import com.poc.rom.mapper.CartMapper;
 import com.poc.rom.mapper.CompleteCartMapper;
@@ -13,15 +12,17 @@ import com.poc.rom.repository.CartRepository;
 import com.poc.rom.resource.CartDto;
 import com.poc.rom.resource.CartRequest;
 import com.poc.rom.resource.CompleteCartDto;
+import com.poc.rom.service.CartItemService;
 import com.poc.rom.service.CartService;
+import com.poc.rom.service.TableRService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,15 +37,21 @@ public class CartController {
     private CompleteCartMapper completeCartMapper;
     private CartItemMapper cartItemMapper;
     private CartItemRepository cartItemRepository;
+    private TableRService tableRService;
+    private SimpMessagingTemplate messagingTemplate;
+    private CartItemService cartItemService;
 
     private CartService cartService;
 
-    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, CartService cartService) {
+    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, TableRService tableRService, SimpMessagingTemplate messagingTemplate, CartItemService cartItemService, CartService cartService) {
         this.cartRepository = cartRepository;
         this.cartMapper = cartMapper;
         this.completeCartMapper = completeCartMapper;
         this.cartItemMapper = cartItemMapper;
         this.cartItemRepository = cartItemRepository;
+        this.tableRService = tableRService;
+        this.messagingTemplate = messagingTemplate;
+        this.cartItemService = cartItemService;
         this.cartService = cartService;
     }
 
@@ -66,12 +73,29 @@ public class CartController {
         if (cart.isPresent()) {
             if (completeCartDto != null) {
                 cartService.refreshCartItems(cart.get(), completeCartDto);
-//                cart.get().getCartItems().forEach(cartItem -> cartItem.set);
-//                CartItem cartItem = cart.get().getCartItems().get(0);
-//                cartItem.setPreSelected(completeCartDto.getCartItems().get(0).getPreSelected());
-//                cartItemRepository.save(cartItem);
             }
+            List<TableR> allTables = getKitchenOrdersSocket();
+            messagingTemplate.convertAndSend("/topic/kitchen", allTables);
             return completeCartMapper.map(cart.get());
+        }
+        return null;
+    }
+
+    @MessageMapping("/kitchenOrders")
+    @SendTo("/topic/kitchen")
+    public List<TableR> getKitchenOrdersSocket() {
+        List<TableR> allTables = tableRService.getAllTables();
+        return allTables;
+    }
+
+    @GetMapping("/cartItem/setReady/{id}")
+    public CartItem setCartItemReady(@PathVariable Long id) {
+        Optional<CartItem> byId = cartItemRepository.findById(id);
+        if (byId.isPresent()) {
+            CartItem cartItem = cartItemService.setCartItemToReady(byId.get());
+            List<TableR> allTables = getKitchenOrdersSocket();
+            messagingTemplate.convertAndSend("/topic/kitchen", allTables);
+            return cartItem;
         }
         return null;
     }

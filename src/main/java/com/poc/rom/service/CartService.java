@@ -11,12 +11,14 @@ import com.poc.rom.resource.CartDto;
 import com.poc.rom.resource.CartItemDto;
 import com.poc.rom.resource.CompleteCartDto;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Transactional
 @Service
 public class CartService {
 
@@ -71,10 +73,14 @@ public class CartService {
 
     public Cart addMissingItemsToCart(Cart cart) {
         List<MenuItem> completeMenu = menuItemRepository.findAll();
+
         completeMenu.forEach(menuItem -> {
             if (cart.getCartItems().stream().noneMatch(cartItemDto -> Objects.equals(cartItemDto.getMenuItem().getId(), menuItem.getId()))) {
+                MenuItem managedMenuItem = menuItemRepository.findById(menuItem.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid MenuItem ID"));
+
                 CartItem cartItem = CartItem.builder()
-                        .menuItem(menuItem)
+                        .menuItem(managedMenuItem)
                         .quantity(0)
                         .preSelected(0)
                         .confirmed(0)
@@ -82,9 +88,11 @@ public class CartService {
                         .payed(0)
                         .cart(cart)
                         .build();
+
                 cart.getCartItems().add(cartItemRepository.save(cartItem));
             }
         });
+
         return cartRepository.save(cart);
     }
 
