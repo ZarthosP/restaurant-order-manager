@@ -35,4 +35,8 @@ public class TableRService {
     public List<TableR> getAllTables() {
         return tableRRepository.findAll();
     }
+
+    public List<TableR> findOpenedTables() {
+        return tableRRepository.findOpenedTables();
+    }
 }

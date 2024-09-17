@@ -84,7 +84,7 @@ public class CartController {
     @MessageMapping("/kitchenOrders")
     @SendTo("/topic/kitchen")
     public List<TableR> getKitchenOrdersSocket() {
-        List<TableR> allTables = tableRService.getAllTables();
+        List<TableR> allTables = tableRService.findOpenedTables();
         return allTables;
     }
 
