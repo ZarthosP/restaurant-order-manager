@@ -1,6 +1,7 @@
 package com.poc.rom.resource;
 
 import com.fasterxml.jackson.annotation.JsonRootName;
+import com.poc.rom.enums.TableStatus;
 import lombok.Data;
 
 import java.util.List;
@@ -11,6 +12,8 @@ public class TableRDto {
 
     private Long id;
     private int number;
+    private int numberOfClients;
+    private String tableStatus;
     private CartDto cart;
 
 }

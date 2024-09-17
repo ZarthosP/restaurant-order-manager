@@ -1,5 +1,6 @@
 package com.poc.rom.entity;
 
+import com.poc.rom.enums.UserType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,4 +29,7 @@ public class User {
     private String firstName;
 
     private String lastName;
+
+    @Enumerated(EnumType.STRING)
+    private UserType userType;
 }
