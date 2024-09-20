@@ -23,6 +23,12 @@ public class TableR {
 
     private int numberOfClients;
 
+    private boolean clientNotification;
+
+    private boolean kitchenNotification;
+
+    private boolean barNotification;
+
     @Enumerated(EnumType.STRING)
     private TableStatus tableStatus;
 

@@ -9,9 +9,11 @@ import com.poc.rom.mapper.CartMapper;
 import com.poc.rom.mapper.CompleteCartMapper;
 import com.poc.rom.repository.CartItemRepository;
 import com.poc.rom.repository.CartRepository;
+import com.poc.rom.repository.TableRRepository;
 import com.poc.rom.resource.CartDto;
 import com.poc.rom.resource.CartRequest;
 import com.poc.rom.resource.CompleteCartDto;
+import com.poc.rom.resource.TableRDto;
 import com.poc.rom.service.CartItemService;
 import com.poc.rom.service.CartService;
 import com.poc.rom.service.TableRService;
@@ -32,6 +34,7 @@ import java.util.Optional;
 @CrossOrigin
 public class CartController {
 
+    private final TableRRepository tableRRepository;
     private CartRepository cartRepository;
     private CartMapper cartMapper;
     private CompleteCartMapper completeCartMapper;
@@ -40,10 +43,12 @@ public class CartController {
     private TableRService tableRService;
     private SimpMessagingTemplate messagingTemplate;
     private CartItemService cartItemService;
+    private TableRController tableRController;
+
 
     private CartService cartService;
 
-    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, TableRService tableRService, SimpMessagingTemplate messagingTemplate, CartItemService cartItemService, CartService cartService) {
+    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, TableRService tableRService, SimpMessagingTemplate messagingTemplate, CartItemService cartItemService, TableRController tableRController, CartService cartService, TableRRepository tableRRepository) {
         this.cartRepository = cartRepository;
         this.cartMapper = cartMapper;
         this.completeCartMapper = completeCartMapper;
@@ -52,7 +57,9 @@ public class CartController {
         this.tableRService = tableRService;
         this.messagingTemplate = messagingTemplate;
         this.cartItemService = cartItemService;
+        this.tableRController = tableRController;
         this.cartService = cartService;
+        this.tableRRepository = tableRRepository;
     }
 
     @GetMapping("/getCompleteCart/{id}")
@@ -93,8 +100,13 @@ public class CartController {
         Optional<CartItem> byId = cartItemRepository.findById(id);
         if (byId.isPresent()) {
             CartItem cartItem = cartItemService.setCartItemToReady(byId.get());
+
+            TableR table = tableRRepository.findByCart(cartItem.getCart());
+            List<TableRDto> tableRDtos = tableRController.addNotification(table.getId(), null, cartItem.getMenuItem().getMenuItemType() == MenuItemType.MEAL || cartItem.getMenuItem().getMenuItemType() == MenuItemType.DESSERT ? true : null, cartItem.getMenuItem().getMenuItemType() == MenuItemType.DRINK ? true : null);
+
             List<TableR> allTables = getKitchenOrdersSocket();
             messagingTemplate.convertAndSend("/topic/kitchen", allTables);
+
             return cartItem;
         }
         return null;

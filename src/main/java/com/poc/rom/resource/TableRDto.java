@@ -13,6 +13,9 @@ public class TableRDto {
     private Long id;
     private int number;
     private int numberOfClients;
+    private boolean clientNotification;
+    private boolean kitchenNotification;
+    private boolean barNotification;
     private String tableStatus;
     private CartDto cart;
 
