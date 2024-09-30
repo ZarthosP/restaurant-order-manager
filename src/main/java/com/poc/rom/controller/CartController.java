@@ -1,30 +1,26 @@
 package com.poc.rom.controller;
 
-import com.poc.rom.entity.Cart;
-import com.poc.rom.entity.CartItem;
-import com.poc.rom.entity.TableR;
+import com.poc.rom.entity.*;
 import com.poc.rom.enums.MenuItemType;
 import com.poc.rom.mapper.CartItemMapper;
 import com.poc.rom.mapper.CartMapper;
 import com.poc.rom.mapper.CompleteCartMapper;
-import com.poc.rom.repository.CartItemRepository;
-import com.poc.rom.repository.CartRepository;
-import com.poc.rom.repository.TableRRepository;
-import com.poc.rom.resource.CartDto;
-import com.poc.rom.resource.CartRequest;
-import com.poc.rom.resource.CompleteCartDto;
-import com.poc.rom.resource.TableRDto;
+import com.poc.rom.mapper.PaymentBundleMapper;
+import com.poc.rom.repository.*;
+import com.poc.rom.resource.*;
 import com.poc.rom.service.CartItemService;
 import com.poc.rom.service.CartService;
 import com.poc.rom.service.TableRService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +31,7 @@ import java.util.Optional;
 public class CartController {
 
     private final TableRRepository tableRRepository;
+    private final MenuItemRepository menuItemRepository;
     private CartRepository cartRepository;
     private CartMapper cartMapper;
     private CompleteCartMapper completeCartMapper;
@@ -44,11 +41,13 @@ public class CartController {
     private SimpMessagingTemplate messagingTemplate;
     private CartItemService cartItemService;
     private TableRController tableRController;
+    private PaymentBundleMapper paymentBundleMapper;
+    private PaymentBundleRepository paymentBundleRepository;
 
 
     private CartService cartService;
 
-    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, TableRService tableRService, SimpMessagingTemplate messagingTemplate, CartItemService cartItemService, TableRController tableRController, CartService cartService, TableRRepository tableRRepository) {
+    public CartController(CartRepository cartRepository, CartMapper cartMapper, CompleteCartMapper completeCartMapper, CartItemMapper cartItemMapper, CartItemRepository cartItemRepository, TableRService tableRService, SimpMessagingTemplate messagingTemplate, CartItemService cartItemService, TableRController tableRController, CartService cartService, TableRRepository tableRRepository, PaymentBundleMapper paymentBundleMapper, MenuItemRepository menuItemRepository, PaymentBundleRepository paymentBundleRepository) {
         this.cartRepository = cartRepository;
         this.cartMapper = cartMapper;
         this.completeCartMapper = completeCartMapper;
@@ -60,6 +59,9 @@ public class CartController {
         this.tableRController = tableRController;
         this.cartService = cartService;
         this.tableRRepository = tableRRepository;
+        this.paymentBundleMapper = paymentBundleMapper;
+        this.menuItemRepository = menuItemRepository;
+        this.paymentBundleRepository = paymentBundleRepository;
     }
 
     @GetMapping("/getCompleteCart/{id}")
@@ -184,4 +186,80 @@ public class CartController {
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
+
+    @PostMapping("/createPaymentBundle")
+    public PaymentBundle addTable(@RequestBody PaymentBundleDto paymentBundleDto) {
+        ArrayList<PrePaymentCartItem> prePaymentCartItems = new ArrayList<>();
+        if (!paymentBundleDto.getPrePaymentCartItems().isEmpty()) {
+            paymentBundleDto.getPrePaymentCartItems().forEach(prePaymentCartItemDto -> {
+                Optional<MenuItem> menuItem = menuItemRepository.findById(prePaymentCartItemDto.getMenuItem().getId());
+                if (menuItem.isPresent()) {
+                    PrePaymentCartItem paymentCartItem = PrePaymentCartItem.builder()
+                            .quantity(prePaymentCartItemDto.getQuantity())
+                            .menuItem(menuItem.get())
+                            .build();
+                    prePaymentCartItems.add(paymentCartItem);
+                }
+            });
+        }
+        PaymentBundle paymentBundle = new PaymentBundle();
+        paymentBundle.setName(paymentBundleDto.getName());
+        paymentBundle.setCartId(paymentBundleDto.getCartId());
+        paymentBundle.setTableId(paymentBundleDto.getTableId());
+
+        for (PrePaymentCartItem prePaymentCartItem : prePaymentCartItems) {
+            prePaymentCartItem.setPaymentBundle(paymentBundle);
+        }
+
+        paymentBundle.setPrePaymentCartItems(prePaymentCartItems);
+        PaymentBundle save = paymentBundleRepository.save(paymentBundle);
+
+        List<PaymentBundle> bundles = getBundleList(save.getTableId());
+        messagingTemplate.convertAndSend("/topic/bundleList", bundles);
+        return save;
+    }
+
+    @GetMapping("/getAllPaymentBundleForTable/{id}")
+    public List<PaymentBundle> getAllPaymentBundles(@PathVariable long id) {
+        List<PaymentBundle> byTableId = paymentBundleRepository.findByTableId(id);
+        return byTableId;
+    }
+
+    @GetMapping("/validateBundle/{id}")
+    public String validateBundle(@PathVariable long id) {
+        Optional<PaymentBundle> bundle = paymentBundleRepository.findById(id);
+        if (bundle.isPresent()) {
+            Optional<Cart> cart = cartRepository.findById(bundle.get().getCartId());
+            if (cart.isPresent()) {
+                cart.get().getCartItems().forEach(cartItem -> {
+                    Optional<PrePaymentCartItem> first = bundle.get().getPrePaymentCartItems().stream().filter(prePaymentCartItem -> prePaymentCartItem.getMenuItem() == cartItem.getMenuItem()).findFirst();
+                    if (first.isPresent()) {
+                        cartItem.setReady(cartItem.getReady() - first.get().getQuantity());
+                        cartItem.setPayed(cartItem.getPayed() + first.get().getQuantity());
+                        cartItemRepository.save(cartItem);
+                    }
+                });
+                CartRequest cartRequest = new CartRequest();
+                cartRequest.setId(Math.toIntExact(cart.get().getId()));
+                cartRequest.setCompleteCartDto(completeCartMapper.map(cart.get()));
+
+                CompleteCartDto completeCartSocket = getCompleteCartSocket(cartRequest);
+                messagingTemplate.convertAndSend("/topic/cart", completeCartSocket);
+            }
+            Long tableId = bundle.get().getTableId();
+            paymentBundleRepository.delete(bundle.get());
+            List<PaymentBundle> bundles = getBundleList(tableId);
+            messagingTemplate.convertAndSend("/topic/bundleList", bundles);
+        }
+        return "ok";
+    }
+
+
+    @MessageMapping("/getBundleList/{id}")
+    @SendTo("/topic/bundleList")
+    public List<PaymentBundle> getBundleList(@DestinationVariable Long id) {
+        List<PaymentBundle> byTableId = paymentBundleRepository.findByTableId(id);
+        return byTableId;
+    }
+
 }
