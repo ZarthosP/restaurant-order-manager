@@ -109,6 +109,14 @@ public class CartController {
             List<TableR> allTables = getKitchenOrdersSocket();
             messagingTemplate.convertAndSend("/topic/kitchen", allTables);
 
+
+            CartRequest cartRequest = new CartRequest();
+            cartRequest.setId(Math.toIntExact(table.getCart().getId()));
+            cartRequest.setCompleteCartDto(completeCartMapper.map(table.getCart()));
+
+            CompleteCartDto completeCartSocket = getCompleteCartSocket(cartRequest);
+            messagingTemplate.convertAndSend("/topic/cart", completeCartSocket);
+
             return cartItem;
         }
         return null;
