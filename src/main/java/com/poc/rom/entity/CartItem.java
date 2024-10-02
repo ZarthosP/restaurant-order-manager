@@ -31,6 +31,8 @@ public class CartItem {
 
     private int ready;
 
+    private int prePayed;
+
     private int payed;
     @ManyToOne
     @JsonBackReference

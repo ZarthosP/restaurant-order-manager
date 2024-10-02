@@ -200,6 +200,8 @@ public class CartController {
         ArrayList<PrePaymentCartItem> prePaymentCartItems = new ArrayList<>();
         if (!paymentBundleDto.getPrePaymentCartItems().isEmpty()) {
             paymentBundleDto.getPrePaymentCartItems().forEach(prePaymentCartItemDto -> {
+                final Optional<CartItem> cartItem = cartItemRepository.findByMenuItemIdAndAndCartId(prePaymentCartItemDto.getMenuItem().getId(),
+                                                                                                                    paymentBundleDto.getCartId());
                 Optional<MenuItem> menuItem = menuItemRepository.findById(prePaymentCartItemDto.getMenuItem().getId());
                 if (menuItem.isPresent()) {
                     PrePaymentCartItem paymentCartItem = PrePaymentCartItem.builder()
@@ -207,6 +209,11 @@ public class CartController {
                             .menuItem(menuItem.get())
                             .build();
                     prePaymentCartItems.add(paymentCartItem);
+                    if (cartItem.isPresent()) {
+                        cartItem.get().setReady(cartItem.get().getReady() - paymentCartItem.getQuantity());
+                        cartItem.get().setPrePayed(cartItem.get().getPrePayed() + paymentCartItem.getQuantity());
+                        cartItemRepository.save(cartItem.get());
+                    }
                 }
             });
         }
@@ -217,6 +224,16 @@ public class CartController {
 
         for (PrePaymentCartItem prePaymentCartItem : prePaymentCartItems) {
             prePaymentCartItem.setPaymentBundle(paymentBundle);
+        }
+
+        final Optional<Cart> cart = cartRepository.findById(paymentBundleDto.getCartId());
+        if (cart.isPresent()) {
+            CartRequest cartRequest = new CartRequest();
+            cartRequest.setId(Math.toIntExact(cart.get().getId()));
+            cartRequest.setCompleteCartDto(completeCartMapper.map(cart.get()));
+
+            CompleteCartDto completeCartSocket = getCompleteCartSocket(cartRequest);
+            messagingTemplate.convertAndSend("/topic/cart", completeCartSocket);
         }
 
         paymentBundle.setPrePaymentCartItems(prePaymentCartItems);
@@ -242,7 +259,8 @@ public class CartController {
                 cart.get().getCartItems().forEach(cartItem -> {
                     Optional<PrePaymentCartItem> first = bundle.get().getPrePaymentCartItems().stream().filter(prePaymentCartItem -> prePaymentCartItem.getMenuItem() == cartItem.getMenuItem()).findFirst();
                     if (first.isPresent()) {
-                        cartItem.setReady(cartItem.getReady() - first.get().getQuantity());
+//                        cartItem.setReady(cartItem.getReady() - first.get().getQuantity());
+                        cartItem.setPrePayed(cartItem.getPrePayed() - first.get().getQuantity());
                         cartItem.setPayed(cartItem.getPayed() + first.get().getQuantity());
                         cartItemRepository.save(cartItem);
                     }
